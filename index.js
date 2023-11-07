@@ -54,6 +54,9 @@ async function run() {
       // console.log(result);
       res.send(result);
     })
+
+
+
     // get data with id
     app.get('/task/:id', async (req, res) => {
       const id = req.params.id;
@@ -63,6 +66,7 @@ async function run() {
       res.setHeader('Content-difficultyLevel', 'application/json');
       res.send(result);
     });
+
 
     // send data to db
 
@@ -111,6 +115,7 @@ async function run() {
           dueDate: updatedItem.dueDate,
           img: updatedItem.img,
           status: updatedItem.status
+
         }
       }
 
@@ -120,6 +125,29 @@ async function run() {
     })
 
 
+
+
+    app.patch('/submit/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
+      const options = { upsert: true };
+      const updateSubmit = req.body;
+      const updateDoc = {
+        $set: {
+          status: updateSubmit.status
+        },
+      };
+      const result = await submitCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    })
+
+
+    app.delete('/task/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await assCollection.deleteOne(query);
+      res.send(result);
+    })
 
 
 

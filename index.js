@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const fileUpload = require('express-fileupload');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -8,22 +9,24 @@ const port = process.env.PORT || 5000;
 require('dotenv').config();
 
 // middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://online-study-ass-11.web.app',
+    'https://online-study-ass-11.firebaseapp.com'
+  ],
+  credentials: true
+}));
+
 app.use(express.json());
-app.use(fileUpload());
+app.use(cookieParser());
+
 
 
 
 app.get('/', (req, res) => {
   res.send('Online study running')
 })
-
-
-
-// middleware
-app.use(cors());
-app.use(express.json());
-
 
 
 
@@ -38,6 +41,37 @@ const client = new MongoClient(uri, {
   }
 });
 
+
+
+// middlewares
+
+const logger = async(req, res, next) =>{
+  console.log('calledL:', req.hostname, req.originalUrl)
+  next();
+}
+
+
+const verifyToken = async(req, res, next) =>{
+  const token = req.cookies?.token;
+  console.log('value of token', token)
+  if(!token){
+    return res.status(401).send({message: 'not authorized'})
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) =>{
+    if(err)
+    {
+      return res.status(401).send({message: 'unauthorized'})
+    }
+    console.log('value in the token', decoded)
+    req.user = decoded;
+    next()
+  })
+  
+}
+
+
+
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -47,8 +81,28 @@ async function run() {
 
     const submitCollection = client.db('assDB').collection('submit');
 
+
+
+    app.post('/jwt',   async (req, res) => {
+      const user = req.body;
+      console.log(user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+      res
+        .cookie('token', token, {
+          httpOnly: true,
+          secure: false
+          // sameSite: 'none'
+        })
+        .send({ success: true });
+      // res.send(token)
+    })
+
+
+
+
+
     // get all data
-    app.get('/task', async (req, res) => {
+    app.get('/task',  async (req, res) => {
       const cursor = assCollection.find();
       const result = await cursor.toArray();
       // console.log(result);
@@ -80,7 +134,7 @@ async function run() {
 
 
 
-    app.get('/submit', async (req, res) => {
+    app.get('/submit',logger,verifyToken, async (req, res) => {
       const cursor = submitCollection.find();
       const result = await cursor.toArray();
       // console.log(result);
@@ -88,7 +142,7 @@ async function run() {
     })
 
 
-    app.post('/submit', async (req, res) => {
+    app.post('/submit',logger, async (req, res) => {
       const submit = req.body;
       console.log(submit);
       const result = await submitCollection.insertOne(submit);
@@ -98,7 +152,7 @@ async function run() {
 
 
 
-    app.put('/task/:id', async (req, res) => {
+    app.put('/task/:id',logger,verifyToken,async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) }
       const options = { upsert: true };

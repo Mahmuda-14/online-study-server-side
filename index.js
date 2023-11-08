@@ -23,7 +23,6 @@ app.use(cookieParser());
 
 
 
-
 app.get('/', (req, res) => {
   res.send('Online study running')
 })
@@ -75,7 +74,7 @@ const verifyToken = async(req, res, next) =>{
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const assCollection = client.db('assDB').collection('task');
 
@@ -88,17 +87,13 @@ async function run() {
       console.log(user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
       res
-        .cookie('token', token, {
-          httpOnly: true,
-          secure: false
-          // sameSite: 'none'
-        })
-        .send({ success: true });
-      // res.send(token)
+      .cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+      })
+      .send({ success: true })
     })
-
-
-
 
 
     // get all data
@@ -202,12 +197,6 @@ async function run() {
       const result = await assCollection.deleteOne(query);
       res.send(result);
     })
-
-
-
-
-
-
 
 
 

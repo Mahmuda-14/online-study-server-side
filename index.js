@@ -73,7 +73,7 @@ const verifyToken = async(req, res, next) =>{
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
+    await client.connect();
 
     const assCollection = client.db('assDB').collection('task');
 
@@ -146,12 +146,12 @@ async function run() {
 
 
 
-    app.put('/task/:id',logger,verifyToken,async (req, res) => {
+    app.put('/task/:id',async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) }
       const options = { upsert: true };
       const updatedItem = req.body;
-
+       console.log(updatedItem);
       const task = {
         $set: {
 
